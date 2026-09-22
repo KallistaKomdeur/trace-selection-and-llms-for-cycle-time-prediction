@@ -1,4 +1,4 @@
-# LLM project
+# Combining Trace Selection and Large Language Models for Process Cycle Time Prediction README. For the supplementary material check the folder "supplementary material"
 
 ## Installation
 
