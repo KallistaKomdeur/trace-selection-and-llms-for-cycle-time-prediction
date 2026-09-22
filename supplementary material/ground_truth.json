@@ -1,0 +1,67 @@
+{
+  "log": "Log Laura \u2014 hospital patient journey (admission to discharge), synthetic benchmark",
+  "seed": 2024,
+  "n_cases": 2500,
+  "activities": [
+    "Admission",
+    "Triage",
+    "Initial Assessment",
+    "Lab Tests",
+    "Imaging",
+    "Specialist Consultation",
+    "Diagnosis",
+    "Surgery",
+    "Post-op Observation",
+    "Treatment",
+    "Medication Administration",
+    "Discharge",
+    "Billing & Payment"
+  ],
+  "resource_units": {
+    "multitask_shared": [
+      "LAB_TEAM_A",
+      "LAB_TEAM_B",
+      "LAB_TEAM_C",
+      "WARD_A",
+      "WARD_B",
+      "WARD_C",
+      "WARD_D",
+      "ADMISSIONS_DESK",
+      "REGISTRAR_BOT",
+      "BILLING_SYSTEM",
+      "BILLING_OFFICE"
+    ],
+    "single_tasking": [
+      "doctors(15)",
+      "nurses(20)",
+      "imaging machines(4)"
+    ]
+  },
+  "attributes": {
+    "Age": "numeric",
+    "Department": [
+      "Cardiology",
+      "Orthopedics",
+      "Neurology",
+      "General",
+      "Pediatrics"
+    ],
+    "TriageLevel": [
+      "Emergency",
+      "Urgent",
+      "Routine"
+    ]
+  },
+  "drift": {
+    "kind": "time_slow",
+    "act": "Lab Tests",
+    "F": 4.0,
+    "why": "laboratory backlog / capacity drop",
+    "perspective": "time",
+    "shape": "sudden",
+    "change_point_case": 1265,
+    "change_point_date": "2024-03-17 16:22:11.263837733+00:00",
+    "target_resource_role": "shared",
+    "resched_applied": false
+  }
+}
