@@ -1,0 +1,33 @@
+
+\begin{table}[t!]
+\centering
+\caption{Sensitivity of the pipeline to $\lambda$ on \textit{BPI11} (Gemini 2.5 Flash, $n=10$), results are reported in terms of $R^2$ and $RA$.}
+\label{tab:lambda}
+\small
+\resizebox{.7\linewidth}{!}{\begin{tabular}{l|c|cccccccc}
+\toprule
+ & Random & \multicolumn{8}{c}{$\lambda$} \\
+ &  & 0 & 0.25 & 0.5 & 0.6 & 0.7 & 0.8 & 0.9 & 1 \\
+\midrule
+$R^2$ & 0.10 & 0.12 & 0.10 & \textbf{0.27} & 0.24 & 0.16 & 0.21 & 0.25 & 0.18 \\
+$RA$    & 46\%\,$\pm$\,6 & 48\%\,$\pm$\,6 & 46\%\,$\pm$\,6 & \textbf{54\%\,$\pm$\,5} & 52\%\,$\pm$\,6 & 51\%\,$\pm$\,6 & 51\%\,$\pm$\,6 & 51\%\,$\pm$\,5 & 50\%\,$\pm$\,6 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+\vspace{-1p}
+
+\begin{table}[t!]
+ \centering
+  \caption{Sensitivity of the pipeline to $\lambda$. Mean over the nine event logs of $R^2$ and $RA$ obtained by GLM-5.3-Flash ($n=10$) on a validation set of 50 cases per log, sampled at random from the training portion of each log.}
+  \label{tab:lambda}
+  \begin{tabular}{l|l|ccccccccc}
+  \hline
+   & & \multicolumn{9}{c}{$\lambda$} \\
+   & & 0.1 & 0.2 & 0.3 & 0.4 & 0.5 & 0.6 & 0.7 & 0.8 & 0.9 \\
+  \hline
+  GLM-5.3-Flash & $R^2$ & 0.32 & 0.45 & 0.46 & 0.46 & \textbf{0.51} & 0.47 & 0.46 & 0.46 & 0.46 \\
+  GLM-5.3-Flash & $RA$    & 61\% & 61\% & 61\%& 62\% & \textbf{63\%} & 61\% & 62\% & 61\% & 63\% \\
+  \hline
+  \end{tabular}
+  \vspace{-1em}
+\end{table}
