@@ -12,7 +12,6 @@ class LogSchema:
         self.case_id = cols["case_id"]                                  # mandatory in log
         self.activity = cols["activity"]                                # mandatory in log
         self.timestamp = cols["timestamp"]                              # mandatory in log
-        self.resource = cols.get("resource")                            # optionally in log
         self.case_attributes = schema_dict.get("case_attributes", [])   # optionally in log
 
 def load_log_schema(log_name):
