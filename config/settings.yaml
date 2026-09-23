@@ -1,29 +1,5 @@
-clean_first: false
 examples_count: 10
 include_case_attributes: true
 include_log_info: true
-included_inter_case:
-  - timesincemidnight
-  - weekday
-  - month
-  - timesincelastevent
-  - event_nr
-  - prev_resource
-  - ent_act
-  - ent_case
-  - ent_handoff
-  - busyness
-  - res_work_items
-  - res_cases
-  - res_unique_tasks
-  - res_unique_handoffs
-  - res_ratio_workitems_global
-  - res_ratio_workitems_resource
-  - res_ratio_task_specific
-  - res_ratio_handoff_specific
-  - res_work_items_per_min
-n_sets: 1000000000000000000000000
 print_only: false
-random_test_selection: true
 selection_mode: similar_prefix_temporal
-truncate_training_examples: false
