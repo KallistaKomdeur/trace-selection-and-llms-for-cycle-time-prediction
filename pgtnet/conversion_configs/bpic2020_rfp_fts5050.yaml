@@ -1,0 +1,13 @@
+# Fixed-sets 50/50 campaign: the partition, the per-case targets and the test
+# prefix lengths all come from fts5050_splits/bpic2020_rfp.json, which is derived
+# only from similar_prefix_temporal_fixed_sets_5050/. train_val_test_ratio is
+# present for compatibility but ignored when fixed_split_file is set.
+dataset_name: BPIC20RFP.xes
+event_attributes: ['prev_resource']
+event_num_att: ['open_cases', 'busyness', 'ent_act', 'ent_case', 'res_work_items', 'res_unique_tasks']
+case_attributes: []
+case_num_att: ['RequestedAmount']
+train_val_test_ratio: [0.64, 0.16, 0.2]
+target_normalization: True
+target_variable: total_time
+fixed_split_file: /home/padela/Scrivania/PGTNet/fts5050_splits/bpic2020_rfp.json

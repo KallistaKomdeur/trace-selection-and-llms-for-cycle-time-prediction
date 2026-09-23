@@ -1,0 +1,11 @@
+# Full-training-set regime: train/val are every case of the original log that is not a
+# fixed-set test case; test stays the fixed sets' test cases at their own prefix lengths.
+dataset_name: HospitalBilling.xes
+event_attributes: ['prev_resource']
+event_num_att: ['open_cases', 'busyness', 'ent_act', 'ent_case', 'res_work_items', 'res_unique_tasks']
+case_attributes: ['gender']
+case_num_att: ['age']
+train_val_test_ratio: [0.64, 0.16, 0.2]
+target_normalization: True
+target_variable: total_time
+fixed_split_file: /home/padela/Scrivania/PGTNet/fts5050_splits/hospital_billing_full.json

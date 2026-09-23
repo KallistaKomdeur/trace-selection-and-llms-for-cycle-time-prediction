@@ -1,0 +1,2 @@
+[GTconvertor] explicit split from /home/padela/Scrivania/PGTNet/fts5050_splits/helpdesk_full.json: 2931 train / 733 val / 916 test cases
+[GTconvertor] max_time_norm = 59.99496527777778

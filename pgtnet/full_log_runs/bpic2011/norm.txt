@@ -1,0 +1,2 @@
+[GTconvertor] explicit split from /home/padela/Scrivania/PGTNet/fts5050_splits/bpic2011_full.json: 665 train / 166 val / 208 test cases
+[GTconvertor] max_time_norm = 1083.0

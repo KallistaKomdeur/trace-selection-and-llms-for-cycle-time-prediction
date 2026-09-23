@@ -1,0 +1,222 @@
+[
+  {
+    "short": "bpic2011",
+    "src": "bpic2011",
+    "dataset": "BPIC2011",
+    "xes": "BPIC2011.xes",
+    "cfg": "bpic2011-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "Age"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "bpic2012",
+    "src": "bpic2012",
+    "dataset": "BPIC12V2",
+    "xes": "BPIC12V2.xes",
+    "cfg": "bpic2012v2-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "AMOUNT_REQ"
+    ],
+    "case_id_key": "case"
+  },
+  {
+    "short": "bpic2015",
+    "src": "bpic2015",
+    "dataset": "BPIC2015",
+    "xes": "BPIC2015.xes",
+    "cfg": "bpic2015-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "bpic2020_domestic",
+    "src": "bpic2020_domestic_declarations",
+    "dataset": "BPIC20DomesticV2",
+    "xes": "BPIC20DomesticV2.xes",
+    "cfg": "bpic2020domestic-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "Amount"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "bpic2020_international",
+    "src": "bpic2020_international_declarations",
+    "dataset": "BPIC20InternationalV2",
+    "xes": "BPIC20InternationalV2.xes",
+    "cfg": "bpic2020international-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "Amount"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "bpic2020_prepaid",
+    "src": "bpic2020_prepaid_travel_costs",
+    "dataset": "BPIC20Prepaid",
+    "xes": "BPIC20Prepaid.xes",
+    "cfg": "bpic2020prepaid-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "RequestedAmount"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "bpic2020_rfp",
+    "src": "bpic2020_request_for_payment",
+    "dataset": "BPIC20RFP",
+    "xes": "BPIC20RFP.xes",
+    "cfg": "bpic2020rfp-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "RequestedAmount"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "bpic2020_permit",
+    "src": "bpic2020_travel_permit_data",
+    "dataset": "BPIC20Permit",
+    "xes": "BPIC20Permit.xes",
+    "cfg": "bpic2020permit-GPSwGraphormer-ckptbest",
+    "case_attributes": [
+      "Overspent"
+    ],
+    "case_num_att": [],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "gen_baseline",
+    "src": "gen_baseline",
+    "dataset": "Baseline",
+    "xes": "baseline.xes",
+    "cfg": "baseline-GPSwGraphormer-ckptbest",
+    "case_attributes": [
+      "Department",
+      "TriageLevel"
+    ],
+    "case_num_att": [
+      "Age"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "gen_drifted",
+    "src": "gen_drifted",
+    "dataset": "BaselineDrifted",
+    "xes": "baseline_drifted.xes",
+    "cfg": "baseline_drifted-GPSwGraphormer-ckptbest",
+    "case_attributes": [
+      "Department",
+      "TriageLevel"
+    ],
+    "case_num_att": [
+      "Age"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "helpdesk",
+    "src": "helpdesk",
+    "dataset": "HelpDeskV2",
+    "xes": "HelpDeskV2.xes",
+    "cfg": "helpdeskv2-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [],
+    "case_id_key": "case:concept:name"
+  },
+  {
+    "short": "hospital_billing",
+    "src": "hospital_billing",
+    "dataset": "HospitalBilling",
+    "xes": "HospitalBilling.xes",
+    "cfg": "hospitalbilling-GPSwGraphormer-ckptbest",
+    "case_attributes": [
+      "gender"
+    ],
+    "case_num_att": [
+      "age"
+    ],
+    "case_id_key": "case_id"
+  },
+  {
+    "short": "bpic2011_full",
+    "src": "bpic2011",
+    "dataset": "BPIC2011",
+    "xes": "BPIC2011.xes",
+    "cfg": "bpic2011-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "Age"
+    ],
+    "case_id_key": "Case ID"
+  },
+  {
+    "short": "bpi12w_full",
+    "src": "bpi12w",
+    "dataset": "Bpi12w",
+    "xes": "Bpi12w.xes",
+    "cfg": "bpi12w-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "AMOUNT_REQ"
+    ],
+    "case_id_key": "case:concept:name"
+  },
+  {
+    "short": "bpi12w",
+    "src": "bpi12w",
+    "dataset": "Bpi12w",
+    "xes": "Bpi12w.xes",
+    "cfg": "bpi12w-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "AMOUNT_REQ"
+    ],
+    "case_id_key": "case:concept:name"
+  },
+  {
+    "short": "bpic2012_full",
+    "src": "bpic2012",
+    "dataset": "BPIC12V2",
+    "xes": "BPIC12V2.xes",
+    "cfg": "bpic2012v2-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [
+      "AMOUNT_REQ"
+    ],
+    "case_id_key": "case"
+  },
+  {
+    "short": "hospital_billing_full",
+    "src": "hospital_billing",
+    "dataset": "HospitalBilling",
+    "xes": "HospitalBilling.xes",
+    "cfg": "hospitalbilling-GPSwGraphormer-ckptbest",
+    "case_attributes": [
+      "gender"
+    ],
+    "case_num_att": [
+      "age"
+    ],
+    "case_id_key": "case_id"
+  },
+  {
+    "short": "helpdesk_full",
+    "src": "helpdesk",
+    "dataset": "HelpDeskV2",
+    "xes": "HelpDeskV2.xes",
+    "cfg": "helpdeskv2-GPSwGraphormer-ckptbest",
+    "case_attributes": [],
+    "case_num_att": [],
+    "case_id_key": "case:concept:name"
+  }
+]

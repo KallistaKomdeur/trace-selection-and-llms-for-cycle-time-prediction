@@ -1,0 +1,2 @@
+[GTconvertor] explicit split from /home/padela/Scrivania/PGTNet/fts5050_splits/hospital_billing_full.json: 14329 train / 3582 val / 2089 test cases
+[GTconvertor] max_time_norm = 231.72237268518518
