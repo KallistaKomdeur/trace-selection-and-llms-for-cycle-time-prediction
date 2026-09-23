@@ -1,12 +1,13 @@
-python-dotenv>=1.2.0
+# Data handling
+pandas>=2.1.0
+scikit-learn>=1.8.0
+numpy >= 2.4.2
 
+# LLM
 google-genai>=1.62
 openai>=2.17
 anthropic>=0.79.0
 
+# Config and env
+python-dotenv>=1.2.0
 pyyaml>=6.0
-pandas>=2.1.0
-scipy>=1.17.0
-scikit-learn>=1.8.0
-xgboost>=3.2.0
-numpy >= 2.4.2
