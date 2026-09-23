@@ -40,9 +40,9 @@ Create a `.env` file in the repo root with whichever provider keys you will use,
 ### 4. Adding a dataset
 
 1. Create a folder `logs` in the root directory
-2. In `logs`, make a folder `event_log_name`
-3. In `log/event_log_name`, place file `event_log_name.csv`
-4. In `config/log_schemas`, create file `event_log_name.yaml`. Create a schema for your log as shown in `tester.yaml`, or use one of the predefined schemas of frequently used process mining datasets.
+2. In `logs`, make a folder `<event_log_name>`
+3. In `log/<event_log_name>`, place file `<event_log_name>.csv`
+4. In `config/log_schemas`, create file `<event_log_name>.yaml`. Create a schema for your log as shown in `tester.yaml`, or use one of the predefined schemas of frequently used process mining datasets.
 
 ### 5. Adding a prompt template
 
@@ -72,7 +72,7 @@ python -m test_llm <log_name> <provider> <configuration> <OPTIONAL: --model>
 
 The input parameters are:
 
-1. log_name: name of the event log. Can be any of `event_log_name`
+1. log_name: name of the event log. Can be any of `<event_log_name>`
 2. provider: name of the LLM provider. Restricted to "gemini", "openai", "anthropic"
 3. configuration: which input configuration to use. Restricted to the names of available prompts in `prompts/`
 4. OPTIONAL --model: which model to use from the LLM provider. Default to gemini 2.5-flash, as used in the research associated with this repo.
@@ -98,3 +98,9 @@ The following settings are available in `config/settings.yaml`:
   - similar_prefix: training examples with the closest prefix to the test
     prefix, by control-flow (normalized Damerau-Levenshtein) distance alone
   - similar_prefix_temporal: training examples chosen by 0.5 * normalized control-flow distance + 0.5 normalized prefix-cycle-time distance
+
+## Outputs:
+- `results/<event_log_name>/run_X.jsonl`: one line per query with settings used and results.
+- `results/<event_log_name>/evaluation_summary.json`: evaluation metrics across runs and settings for one event log.
+- `logs/<event_log_name>/<event_log_name>_<selection_mode>_fixed_sets.json`: the generated test sets with fixed examples for reproducibility.
+- `logs/<event_log_name>/<event_log_name>_timings.json`: how long generation of the fixed train/test sets took.
