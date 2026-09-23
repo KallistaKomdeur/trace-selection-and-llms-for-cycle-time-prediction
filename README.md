@@ -1,10 +1,19 @@
-# LLM project
+# Combining Trace Selection and Large Language Models for Process Cycle Time Prediction
+
+Few-shot LLM prediction of total case duration. Given a partial case, the pipeline builds a prompt with some similar, complete example cases and asks an LLM to predict how long the case will take in total. Three strategies for picking those examples are compared: random, only control-flow similarity, and control-flow + temporal similarity.
+
+## Pipeline overview
+
+1. **Preprocess** a raw CSV event log into a JSONL of cases with case attributes, an activity/time sequence, and a total duration.
+2. **Generate fixed test sets** by splitting cases temporally into train/test, then sample test cases (truncated to a random prefix) paired with a fixed set of training examples, chosen by one of the three strategies.
+3. **Query the LLM** over every (examples, test_case) pair, parse its numerical answer, and log it.
+4. **Evaluate** the performance by aggregating all runs for a dataset.
 
 ## Installation
 
 ### 1. Make sure Python is installed
 
-This project requires a Python version between 3.9 and 3.11 (I use 3.10). You can check your version by running the following in the terminal:
+This project requires a Python version between 3.9 and 3.11. The Python version can be checked by running the following in the terminal:
 
 ```bash
 python --version
@@ -20,24 +29,52 @@ To install the required dependencies, run the following in the terminal:
 pip install -r requirements.txt
 ```
 
-### 3. Prepare your log
+### 3. Set up environment.
 
-Since logs are too large to store on GitHub, you'll have to upload yours yourself. To do so:
+Create a `.env` file in the repo root with whichever provider keys you will use, using the following names:
 
-1. Make a folder "logs" in the root directory.
-2. In "logs", make a folder with the name of your event log
-3. In "logs/your_event_log", place file "your_event_log.csv"
-4. In "config/log_schemas", create a file "your_log.yaml". In here, create a schema for your log as shown in the example yaml files.
-
-### 4. Prepare your environment.
-
-In the project root, add a .env file. This file is ignored (see .gitignore), so your keys won't be pushed to github. In here, define (depending on the provider you want to use):
-
-- GEMINI_API_KEY_X (where X is replaced by numbers, so 0, 1, etc. )
+- GEMINI_API_KEY
 - OPENAI_API_KEY
 - ANTHROPIC_API_KEY
 
-## Running the project
+### 4. Adding a dataset
+
+1. Create a folder `logs` in the root directory
+2. In `logs`, make a folder {event_log_name}
+3. In `log/event_log_name`, place file `event_log_name.csv`
+4. In `config/log_schemas`, create file `event_log_name.yaml`. Create a schema for your log as shown in `tester.yaml`, or use one of the predefined schemas of frequently used process mining datasets.
+
+### 5. Adding a prompt template
+
+You can try out different prompts by adding a new `.txt` file in `prompts/`. Available placeholders include:
+
+- `{EXAMPLES}`: one JSON object per line, one per training example
+- `{NEW_CASE}`: the partial test case
+- `{CASE_ATTRIBUTE_EXPLANATIONS}`: filled only if `include_log_info: true`
+- `{PROCESS_CONTEXT}`: the log's `log_description`, filled only if
+  `include_log_info: true`
+
+Ask the model to mark its final answer as:
+
+```
+[[##answer]] <number>
+```
+
+## Running
+
+### General settings
+
+The following settings are available in `config/settings.yaml`:
+
+- `examples_count`: how many training examples the LLM receives per test case
+- `include_case_attributes`: whether inter-case attributes are included in the prompt
+- `include_log_info`: whether a general description of the log is included in the prompt
+- `print_only`: for debugging. If set to true, an example prompt is printed in the terminal, but no query is sent to an LLM
+- `selection_mode`: which selection mechanism should be used to select examples. The following selection modes are available:
+  - random: uniform random training examples
+  - similar_prefix: training examples with the closest prefix to the test
+    prefix, by control-flow (normalized Damerau-Levenshtein) distance alone
+  - similar*prefix_temporal: training examples chosen by 0.5 * normalized control-flow distance + 0.5 normalized prefix-cycle-time distance
 
 ### Getting LLM responses
 
@@ -49,50 +86,15 @@ python -m test_llm <log_name> <provider> <configuration> <OPTIONAL: --model>
 
 The input parameters are:
 
-1. log_name: name of the event log. Can be any of "your_event_log"
+1. log_name: name of the event log. Can be any of `event_log_name`
 2. provider: name of the LLM provider. Restricted to "gemini", "openai", "anthropic"
-3. configuration: which input configuration to use. Restricted to the names of available prompts
-4. OPTIONAL --model: which model to use from the LLM provider. Default to gemini 2.5-flash, other options gpt-4o-mini
-
-If you want to only see the prompt and not the result, change in "config/settings.yaml" flag "print_only" to True.
+3. configuration: which input configuration to use. Restricted to the names of available prompts in `prompts/`
+4. OPTIONAL --model: which model to use from the LLM provider. Default to gemini 2.5-flash, as used in the research associated with this repo.
 
 ### Evaluating LLM responses
 
-To evaluate LLM results for a particular log, configuration, or provider, run the following in the terminal:
+To evaluate LLM results for a particular log, run the following in the terminal:
 
 ```
-python -m evaluate <log_name> <selection_mode>
+python -m evaluate <log_name>
 ```
-
-### Benchmark evaluation
-
-XGBoost was used as benchmark. To train and tune an XGBoost model on the data (both raw and cleaned), run the following in the terminal:
-
-```
-python -m train_xgboost <log_name> <selection_mode>
-```
-
-## Useful information
-
-### Mode description
-
-There are currently five supported modes:
-
-1. Single: the activity sequence consists only of the activity and time since start, no inter-case event-level features
-2. Single split: the same as single, but the entire prompt text is spread over multiple queries
-3. Inter-case: the activity sequence consists of the activity, time since case start, and all inter-case features selected in the settings file
-4. Inter-case split: the same as inter-case, but the entire prompt text is spread over multiple queries
-5. Inter-case self-select: the same as inter-case, but a part was added where the LLM is instructed to first select which inter-case features it deems useful, and then instructed to only focus on those inter-case features
-6. Single reasoning: the same as single, but reasoning is requested and included in the LLM output
-
-### Settings
-
-Settings can be found in config/settings.yaml. You can change the following settings:
-
-1. n_runs: how many runs (= entire prompts) are done for an experiment
-2. examples_count: how many examples are included in the prompt text
-3. print_only: whether the experiment is actually run (= false), or an example prompt of those settings is printed (= true)
-4. clean_first: whether the raw log is used or the log is cleaned before preprocessing
-5. include_case_attributes: whether case attributes are included in the prompt
-6. include_log_info: whether a context description is included in the prompt
-7. included_inter_case: a list of all inter-case features available. The uncommented ones are the ones actually passed to the prompt
