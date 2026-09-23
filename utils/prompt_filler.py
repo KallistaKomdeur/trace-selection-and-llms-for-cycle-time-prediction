@@ -7,68 +7,38 @@ from utils.generate_test_sets import generate_fixed_sets
 
 SEED = 42
 
-def format_case(case, configuration, include_case_attr, included_inter_case, case_attr_keys):
-    """
-    Formats one full case.
-    """
-    # Potentially add case attributes
+def format_case(case, include_case_attr, case_attr_keys):
+    """Formats one case (example or test case) as {case_attrs, ActTimeSeq, total_time}."""
     result = get_case_attributes(case, include_case_attr, case_attr_keys)
-    seq = []
-
-    # If single variant, only include the activity and time since case start
-    if configuration.startswith("single"):
-        for act, t, *_ in case["ActTimeSeq"]:
-            seq.append([act, t])
-
-    # Determines which inter-case features are included in the prompt
-    elif configuration.startswith("inter-case"):
-        allowed = set(included_inter_case)
-
-        for event in case["ActTimeSeq"]:
-            act, t = event[:2]
-            ef = event[2] if len(event) == 3 else {}
-            seq.append([act, t, {k: v for k, v in ef.items() if k in allowed}])
-
-    result["ActTimeSeq"] = seq
+    result["ActTimeSeq"] = [[act, t] for act, t in case["ActTimeSeq"]]
     result["total_time"] = case["total_time"]
     return result
 
 def get_case_attributes(case, include_case_attr, case_attribute_keys):
-    """
-    Adds schema-defined case attributes depending on settings
-    """
+    """Adds schema-defined case attributes depending on settings"""
     if not include_case_attr:
         return {}
-
     return {k: case[k] for k in case_attribute_keys if k in case}
 
-def fill_prompt(log_name, configuration, set_index, clean_first):
-    """
-    Fills the prompt template with values. 
-    """
-    # Get configuration settings
+def fill_prompt(log_name, configuration, set_index):
+    """Fills the prompt template with values for one fixed (examples, test_case) set"""
     config = load_config()
-    n_sets = config.get("n_sets", 2)       
-    examples_count = config.get("examples_count", 2)
+    examples_count = config.get("examples_count", 10)
     include_case_attr = config.get("include_case_attributes", False)
-    included_inter_case = config.get("included_inter_case", [])
     include_log_info = config.get("include_log_info", False)
     selection_mode = config.get("selection_mode", "random")
 
-    # Get file locations
     root = Path(__file__).resolve().parents[1]
     log_dir = root / "logs" / log_name
     prompt_path = root / "prompts" / f"{configuration}.txt"
 
     fixed_sets_path = log_dir / f"{log_name}_{selection_mode}_fixed_sets.json"
-
     if not fixed_sets_path.exists():
-        generate_fixed_sets(log_name, n_sets, examples_count, clean_first, seed=SEED)
-        fixed_sets_path = log_dir / f"{log_name}_{selection_mode}_fixed_sets.json"
-    
+        generate_fixed_sets(log_name, examples_count, seed=SEED)
+
     with open(fixed_sets_path, encoding="utf-8") as f:
         all_sets = json.load(f)
-    
+
     if set_index >= len(all_sets):
         raise IndexError(f"set_index {set_index} out of range (only {len(all_sets)} sets available)")
 
@@ -80,24 +50,21 @@ def fill_prompt(log_name, configuration, set_index, clean_first):
     if not prompt_path.exists():
         raise FileNotFoundError(prompt_path)
 
-    # Optionally collect case attribute explanations and log description/context
-    case_attr_expl = ""
-    process_context = ""
     schema = load_log_schema(log_name) 
     case_attrs = schema.case_attributes
     case_attr_keys = list(case_attrs) if case_attrs else []
 
+    # Optionally describe the case attributes and the process itself to the LLM
+    case_attr_expl = ""
+    process_context = ""
     if include_log_info:
-        case_attr_expl = "\n".join(f"- the key \"{k}\", which value is {v}" for k, v in (case_attrs or {}).items())
+        if isinstance(case_attrs, dict):
+            case_attr_expl = "\n".join(f'- the key "{k}", which value is {v}' for k, v in case_attrs.items())
+        else:
+            case_attr_expl = "\n".join(f'- the key "{k}"' for k in case_attr_keys)
         process_context = schema.log_description or ""
 
-    # Sample and format random examples from training set
-    example_blocks = []
-    
-    for case in example_cases:
-        formatted = format_case(case, configuration, include_case_attr, included_inter_case, case_attr_keys)
-        example_blocks.append(json.dumps(formatted))
-
+    example_blocks = [json.dumps(format_case(case, include_case_attr, case_attr_keys)) for case in example_cases]
     examples_str = "\n\n".join(example_blocks)
 
     # Sample prediction case from test set
@@ -105,7 +72,7 @@ def fill_prompt(log_name, configuration, set_index, clean_first):
     true_total_time = test_case["true_total_time"]
     true_total_length = test_case["true_total_length"]
 
-    formatted_truncated = format_case(test_case, configuration, include_case_attr, included_inter_case, case_attr_keys)
+    formatted_truncated = format_case(test_case, include_case_attr, case_attr_keys)
     test_block = json.dumps(formatted_truncated, separators=(", ", ": "))
 
     # Fill template
@@ -113,8 +80,8 @@ def fill_prompt(log_name, configuration, set_index, clean_first):
     filled_prompt = (template
         .replace("{EXAMPLES}", examples_str)
         .replace("{NEW_CASE}", test_block)
-        .replace("{CASE_ATTRIBUTE_EXPLANATIONS}", case_attr_expl or "")
-        .replace("{PROCESS_CONTEXT}", process_context or "")
+        .replace("{CASE_ATTRIBUTE_EXPLANATIONS}", case_attr_expl)
+        .replace("{PROCESS_CONTEXT}", process_context)
     )
 
-    return filled_prompt, true_total_time, prefix_length, include_case_attr, include_log_info, included_inter_case, true_total_length
+    return filled_prompt, true_total_time, prefix_length, include_case_attr, include_log_info, true_total_length
