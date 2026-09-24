@@ -5,7 +5,6 @@ import pandas as pd
 
 from utils.log_schema import load_log_schema
 
-
 def extract_timestamp_features(group, timestamp_col):
     """Adds 'timesincecasestart' (minutes) to every event in a single case."""
     group = group.sort_values(timestamp_col, ascending=True, kind="mergesort")
@@ -13,26 +12,22 @@ def extract_timestamp_features(group, timestamp_col):
     group["timesincecasestart"] = (group[timestamp_col] - start).dt.total_seconds() / 60
     return group
 
-
 def build_event_features(group, timestamp_col, activity_col):
     """Builds the [activity, time_since_case_start] sequence for one case."""
-    group = group.sort_values(timestamp_col).reset_index(drop=True)
+    group = group.sort_values(timestamp_col)
+    has_tsc = "timesincecasestart" in group.columns
 
     seq = []
-    for idx in range(len(group)):
-        row = group.iloc[idx]
-        seq.append([
-            row[activity_col],
-            row["timesincecasestart"] if "timesincecasestart" in group.columns else 0,
-        ])
+    for row in group.itertuples(index=False):
+        activity = getattr(row, activity_col)
+        tsc = getattr(row, "timesincecasestart") if has_tsc else 0
+        seq.append([activity, tsc])
 
     return seq
-
 
 def safe_convert(obj):
     """Helper safe converter for different data types in logs"""
     return obj.item() if hasattr(obj, "item") else obj
-
 
 def preprocess_log(log_name):
     """Reads logs/<log_name>/<log_name>.csv and writes the preprocessed JSONL next to it."""
@@ -50,32 +45,30 @@ def preprocess_log(log_name):
     if not input_file.exists():
         raise FileNotFoundError(f"Log not found: {input_file}")
 
-    data = pd.read_csv(input_file, encoding="latin-1")
+    data = pd.read_csv(input_file, encoding="latin-1", low_memory=False)
     available_cols = set(data.columns)
     has_ts = timestamp_col in available_cols
     has_act = activity_col in available_cols
 
     if has_ts:
-        print("Sorting input data by timestamp")
         data[timestamp_col] = pd.to_datetime(data[timestamp_col], errors="coerce", utc=True)
         data = data.sort_values(timestamp_col).reset_index(drop=True)
-
-        print("Extracting timestamp features")
-        data = data.groupby(case_id_col, group_keys=False).apply(
-            lambda g: extract_timestamp_features(g, timestamp_col))
+        case_start = data.groupby(case_id_col)[timestamp_col].transform("min")
+        data["timesincecasestart"] = (data[timestamp_col] - case_start).dt.total_seconds() / 60
 
     print("Building output")
     output = []
 
     if has_ts:
-        # Order cases by their end (= latest) timestamp
-        case_order = data.groupby(case_id_col)[timestamp_col].max().sort_values().index
+        case_end = data.groupby(case_id_col)[timestamp_col].max()
+        case_order = case_end.sort_values().index
     else:
-        # Fallback: preserve first-seen grouping order.
         case_order = list(data.groupby(case_id_col).groups.keys())
 
+    grouped = data.groupby(case_id_col, sort=False)
+
     for cid in case_order:
-        group = data[data[case_id_col] == cid]
+        group = grouped.get_group(cid)
         total_time = ((group[timestamp_col].max() - group[timestamp_col].min()).total_seconds() / 60 if has_ts else 0)
 
         if has_ts:
