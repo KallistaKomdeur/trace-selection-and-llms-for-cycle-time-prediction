@@ -77,6 +77,13 @@ The input parameters are:
 3. configuration: which input configuration to use. Restricted to the names of available prompts in `prompts/`
 4. OPTIONAL --model: which model to use from the LLM provider. Default to gemini 2.5-flash, as used in the research associated with this repo.
 
+For example, if `logs/bpic2011/bpic2011.csv` exists, and we want to evaluate this using Gemini 2.5 Flash using the available prompt:
+
+```
+python -m test_llm bpic2011 gemini single_ref
+```
+Alternatively, multiple commands can be executed using `experiment_runner.py` by adding commands and settings combinations.
+
 ### Evaluating LLM responses
 
 To evaluate LLM results for a particular log, run the following in the terminal:
