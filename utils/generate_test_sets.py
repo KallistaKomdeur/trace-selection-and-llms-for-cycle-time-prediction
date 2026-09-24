@@ -35,6 +35,7 @@ def generate_fixed_sets(log_name, examples_count, seed):
         sets, timing_summary = generate_random_sets(train_cases, test_cases, examples_count, seed)
     else:
         print(f'Unknown selection_mode "{selection_mode}"')
+        return None
         
     output_path = log_dir / f"{log_name}_{selection_mode}_fixed_sets.json"
     with open(output_path, "w", encoding="utf-8") as f:
