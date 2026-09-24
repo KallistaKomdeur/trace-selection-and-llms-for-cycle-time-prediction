@@ -61,7 +61,7 @@ def prepare_test_cases(test_cases, seed):
 
     return result
 
-def retrieve_random_train_cases(train_cases, examples_count):
+def retrieve_random_train_cases(truncated_test, prefix_len, train_cases, examples_count):
     """Baseline retrieval: training examples sampled uniformly at random"""
     n = min(examples_count, len(train_cases))
     selected = random.sample(train_cases, n)
