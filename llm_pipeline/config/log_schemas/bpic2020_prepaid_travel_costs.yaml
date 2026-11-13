@@ -1,0 +1,9 @@
+log_name: bpic2020_prepaid_travel_costs
+log_description: The dataset contains events pertaining to two years of travel expense claims for prepaid travel costs.
+columns:
+  case_id: Case ID
+  activity: Activity
+  resource: Resource
+  timestamp: Complete Timestamp
+case_attributes:
+  RequestedAmount: the requested amount

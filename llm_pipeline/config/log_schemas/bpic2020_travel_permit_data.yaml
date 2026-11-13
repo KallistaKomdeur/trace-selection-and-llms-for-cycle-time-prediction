@@ -1,0 +1,9 @@
+log_name: bpic2020_travel_permit_data
+log_description: The dataset contains events pertaining to two years of travel permit data.
+columns:
+  case_id: Case ID
+  activity: Activity
+  resource: Resource
+  timestamp: Complete Timestamp
+case_attributes:
+  Overspent: the amount spent more than was allocated

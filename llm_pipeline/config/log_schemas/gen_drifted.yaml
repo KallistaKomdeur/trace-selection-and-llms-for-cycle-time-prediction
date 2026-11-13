@@ -1,0 +1,11 @@
+log_name: gen_drifted
+log_description: The considered process deals with a hospital process.
+columns:
+  case_id: Case ID
+  activity: Activity
+  resource: Resource
+  timestamp: Complete Timestamp
+case_attributes:
+  Age: the age of the patient
+  Department: the department processing the tests
+  TriageLevel: the urgency of the patient
