@@ -9,10 +9,10 @@ scored on the same predictions.
 """
 import argparse, json, os, sys
 
-sys.path.insert(0, "/home/padela/Scrivania/PGTNet/experiments_fts5050")
+sys.path.insert(0, "/path/to/PGTNet/experiments_fts5050")
 from build_fts5050 import iter_entries, CID_KEYS
 
-LLM = "/home/padela/Scrivania/LLM_PPM"
+LLM = "/path/to/LLM_PPM"
 
 
 def main(log, short, val_frac, out_jsonl, out_split, sets="temporal"):
@@ -22,7 +22,7 @@ def main(log, short, val_frac, out_jsonl, out_split, sets="temporal"):
            if sets == "temporal" else
            f"{LLM}/logs/{log}/{log}_similar_prefix_fixed_sets.json")
     if not os.path.exists(src):
-        raise SystemExit(f"fixed sets non trovati: {src}")
+        raise SystemExit(f"fixed sets not found: {src}")
     test, cid_key = {}, None
     for e in iter_entries(src):
         tc, pl = e["test_case"], e["prefix_length"]
@@ -30,9 +30,16 @@ def main(log, short, val_frac, out_jsonl, out_split, sets="temporal"):
             cid_key = next(k for k in CID_KEYS if k in tc)
         cid = str(tc[cid_key])
         if len(tc["ActTimeSeq"]) != pl:
-            raise SystemExit(f"{cid}: {len(tc['ActTimeSeq'])} eventi ma prefix_length={pl}")
+            raise SystemExit(f"{cid}: {len(tc['ActTimeSeq'])} events but prefix_length={pl}")
+        # elapsed/remaining at the prefix: GTconvertor uses spec['remaining_days'] as the
+        # target of a forced test prefix when target_variable is remaining_time, and the
+        # scorer adds elapsed_days back to compare on the total time (remaining protocol).
+        total_min = float(tc["true_total_time"])
+        elapsed_min = float(tc["ActTimeSeq"][pl - 1][1])
         test.setdefault(cid, {"pl": pl, "rec": tc,
-                              "target_days": float(tc["true_total_time"]) / 1440.0})
+                              "target_days": total_min / 1440.0,
+                              "elapsed_days": elapsed_min / 1440.0,
+                              "remaining_days": max(0.0, total_min - elapsed_min) / 1440.0})
 
     train = {}
     with open(f"{LLM}/logs/{log}/{log}_preprocessed.jsonl") as f:
@@ -58,7 +65,8 @@ def main(log, short, val_frac, out_jsonl, out_split, sets="temporal"):
 
     spec = {c: {"target_days": float(train[c]["total_time"]) / 1440.0,
                 "prefix_lengths": None} for c in order}
-    spec.update({c: {"target_days": t["target_days"], "prefix_lengths": [t["pl"]]}
+    spec.update({c: {"target_days": t["target_days"], "prefix_lengths": [t["pl"]],
+                     "elapsed_days": t["elapsed_days"], "remaining_days": t["remaining_days"]}
                  for c, t in test.items()})
     with open(out_split, "w") as f:
         json.dump({"log": short, "case_id_key": cid_key, "train": train_ids,

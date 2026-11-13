@@ -1,0 +1,284 @@
+# Execution backend for local models (llama.cpp llama-server).
+#
+# R2: every sampling parameter is explicit. Server defaults are never relied upon,
+# because they change between llama.cpp versions and cannot be cited in the paper.
+# This file is versioned and its full contents are copied into every result record.
+
+server:
+  url: http://127.0.0.1:8080
+  timeout_s: 900
+
+  # llama.cpp tag the server binary was built from. /props reports build_info, but a
+  # shallow clone loses the build number and reports "b1-<commit>", so the tag is
+  # recorded here explicitly to keep the R7 metadata unambiguous.
+  build_tag: b10653
+
+  # Endpoint style:
+  #   chat       -> POST /v1/chat/completions, the server applies the chat template (--jinja)
+  #   completion -> POST /completion with a pre-templated prompt; required by prefix_cache
+  # Prefix cache reuse (R5) forces "completion" because it needs id_slot.
+  endpoint: chat
+
+  # Context available PER SLOT, read from /props at startup.
+  # Verified on build b10653: with kv_unified the server reports the real per-slot
+  # value directly and does NOT divide -c across slots (a server started with
+  # -c 16384 reports total_slots=4 and n_ctx=16384). Set a number only to override.
+  context_per_slot_override: null
+
+# Which model of the two below is active. Selecting a model is configuration,
+# never a branch in the code.
+active_model: primary
+
+models:
+  primary:
+    name: Qwen3.5-9B
+    quant: Q4_K_M
+    hf_repo: unsloth/Qwen3.5-9B-GGUF:Q4_K_M
+    # Recorded verbatim in the metadata; must match how the server was actually started.
+    server_flags: >-
+      llama-server -hf unsloth/Qwen3.5-9B-GGUF:Q4_K_M
+      -ngl 99 -t 8 -c 16384 --jinja --port 8080
+    # np=1 per the design. Measured on this GPU, raising it to 4 buys only +26%
+    # throughput (0.46 -> 0.58 gen/s): a single request already saturates the 4060,
+    # so concurrency mostly splits the same throughput instead of adding to it.
+    concurrency: 1
+    prefix_cache: false
+
+  # NOT USED in this campaign: only the primary model is being run, so the 35B-A3B
+  # was never downloaded. The entry is kept because it documents the intended
+  # cross-scale robustness check, and because prefix_cache (R5) only ever applied here.
+  secondary:
+    name: Qwen3.5-35B-A3B
+    quant: Q4_K_M
+    hf_repo: unsloth/Qwen3.5-35B-A3B-GGUF:Q4_K_M
+    server_flags: >-
+      llama-server -hf unsloth/Qwen3.5-35B-A3B-GGUF:Q4_K_M
+      -ngl 99 -ot "\.ffn_.*_exps\.=CPU" -t 8
+      -np 4 -c 32768 --cache-reuse 256
+      --slot-save-path ~/kvcache --jinja --mlock --port 8080
+    concurrency: 4
+    # R5: keep a single fixed regime for the whole campaign, never mixed.
+    # Note that --cache-reuse 256 already reuses a shared prefix across consecutive
+    # requests on the same slot; explicit save/restore mainly survives server restarts.
+    prefix_cache: false
+
+# R2: passed explicitly on every single request.
+# Qwen advises against greedy decoding in thinking mode (it degenerates into
+# repetition loops), so these are the documented thinking-mode values.
+# Reproducibility comes from the fixed seed, not from temperature=0.
+sampling:
+  temperature: 0.6
+  top_p: 0.95
+  top_k: 20
+  seed: 42
+  # 256 is ample: with thinking off the model emits ~17 tokens (the answer plus the
+  # two markers). Measured, not guessed.
+  max_tokens: 256
+
+# Disabled on evidence, not preference. With thinking on, this model never converged
+# to an answer: it saturated the budget at 2048, 4096 AND 8192 tokens (52s, 107s, 214s
+# per generation) and returned an empty content every time, so nothing was parsable.
+# The reasoning itself was coherent, it simply did not terminate. The single_ref prompt
+# is also written for non-thinking use ("do not include this reasoning in your output");
+# the reasoning variant of the experiment has its own template, single_reasoning.txt.
+thinking:
+  enabled: false
+  # Remove <think>...</think> before the answer reaches parse_llm_output.
+  # Without this, re.search would match an "[[ ## answer ## ]]" written inside the
+  # reasoning block and extract the wrong number.
+  strip_from_output: true
+
+# R3: refuse to send anything that would be silently truncated.
+context_guard:
+  enabled: true
+  # Extra safety margin on top of prompt_tokens + max_tokens.
+  reserve_tokens: 32
+  # Token cost of the chat template wrapper, used only when /apply-template
+  # is unavailable and the raw prompt has to be tokenised instead.
+  template_overhead_fallback: 64
+
+# Pace the requests so the GPU is not pinned at 100% for hours, which makes the desktop
+# unusable. Purely client side: it changes WHEN a request is sent, never what is sent nor
+# what comes back, so results stay comparable with generations produced without it.
+# sleep_factor is a multiple of each generation's own duration, so it adapts to prompt size.
+throttle:
+  sleep_factor: 0
+  max_sleep_s: 10
+
+reproducibility:
+  # SHA256 of the loaded GGUF (R7). Costs one full read of a ~5.5 GB file at
+  # startup, done once per process and then cached.
+  hash_gguf: true
+
+# ---------------------------------------------------------------------------
+# Z AI (GLM) - remote alternative to the local llama.cpp run.
+# The prompt is byte-identical to the local experiment: only the execution
+# backend changes, so the two runs differ by the model alone.
+# ---------------------------------------------------------------------------
+zai:
+  url: https://api.z.ai/api/paas/v4/chat/completions
+  timeout_s: 900
+  # Key is read from ZAI_API_KEY in the project .env, never from this file.
+
+  active_model: glm-5.3-flash
+  # Parallel requests to the API. Raised from 8 to 16 on 2026-09-18 for future runs.
+  # Every campaign reported in the paper (results_glm_*, results_lambda_tuning) was run
+  # with 8: their timings and throughput refer to that value, not to this one.
+  concurrency: 16
+
+  models:
+    glm-5.3-flash:
+      name: GLM-5.3-Flash
+      api_id: glm-5.3-flash
+      context_window: 1000000
+      # Official Z AI pricing table. Third-party aggregators list roughly double these
+      # figures, so the numbers here come from docs.z.ai, not from a benchmark site.
+      price_input_per_mtok: 0.075
+      price_cached_input_per_mtok: 0.015
+      price_output_per_mtok: 0.25
+      max_output_tokens: 128000
+      # Documented by Z AI: "GLM-5.3 and GLM-5.3-FLASH no longer support disabling
+      # thinking (an error will occur if thinking.type is set to disabled)".
+      thinking_disableable: false
+      # Confirmed against the model's own API page (docs.z.ai/guides/vlm/glm-5.3-flash),
+      # which lists the id and these parameters. It is a vision model, but text-only use
+      # is explicitly supported, which is all this pipeline needs.
+      supported_sampling: [temperature, top_p, max_tokens, reasoning_effort, thinking_type, clear_thinking]
+
+    glm-5.2:
+      name: GLM-5.2
+      api_id: glm-5.2
+      context_window: 1000000
+      price_input_per_mtok: 1.40
+      price_cached_input_per_mtok: 0.26
+      price_output_per_mtok: 4.40
+      max_output_tokens: 128000
+      # Last GLM generation that still accepts thinking.type = disabled.
+      thinking_disableable: true
+      supported_sampling: [temperature, max_tokens, reasoning_effort, thinking_type]
+
+  # R2: explicit on every request. Z AI documents temperature=1.0 as the default for
+  # GLM reasoning models; seed is sent when supported, but reproducibility on a hosted
+  # API cannot be guaranteed the way it can on a pinned local build.
+  sampling:
+    # Z AI recommends temperature 1.0 for this model. Kept at the vendor value rather
+    # than lowered: reasoning models that cannot terminate their thinking are the exact
+    # failure seen locally with Qwen, where the run produced no parsable answer at all,
+    # and a too-cold reasoning model is a known cause of that. Lower it only if the pilot
+    # shows the predictions are too dispersed.
+    temperature: 1.0
+    top_p: 0.95
+    # Reasoning cannot be switched off, but its depth is: low / high / max. The vendor
+    # recommends "max"; "low" is used here deliberately, because the task is to emit one
+    # number and the prompt says not to include the reasoning. It is the main lever on
+    # cost, on wall-clock, and on the risk of never reaching the answer within max_tokens.
+    reasoning_effort: low
+    # thinking.type only supports "enabled" on this model.
+    thinking_type: enabled
+    # Nested under thinking. The vendor documents false as the recommended value; its
+    # exact semantics are not described in the docs, so the recommended value is sent
+    # explicitly rather than left to a server default.
+    clear_thinking: false
+    # seed is not documented for the GLM-5.3 family and is therefore not sent: unlike the
+    # pinned local build, this run is not bit-reproducible. Declare that in the paper.
+    seed: null
+    # Thinking cannot be switched off on 5.3-Flash, so the budget must cover the whole
+    # reasoning trace plus the answer. Too low and the run stops mid-reasoning, having
+    # paid for tokens without producing a parsable answer: that is precisely how the
+    # local Qwen run failed. Measure with --pilot before committing to the campaign.
+    max_tokens: 4096
+
+  thinking:
+    enabled: true
+
+  # Context caching is automatic on Z AI: repeated prompt prefixes are billed at the
+  # "Cached Input" rate, roughly 80% off. No request parameter enables it, so nothing is
+  # sent; what the client does is read back how many tokens were served from cache and
+  # price them correctly, which is the only way the reported cost matches the invoice.
+  # For this workload the cacheable part is the fixed instruction header, measured at
+  # ~700 tokens of a ~2100-token prompt, so expect roughly a third of input to hit.
+  cache:
+    account_for_hits: true
+    # Response fields that may carry the hit count, tried in order.
+    usage_fields:
+      - prompt_tokens_details.cached_tokens
+      - prompt_cache_hit_tokens
+      - cached_tokens
+
+  context_guard:
+    enabled: true
+    reserve_tokens: 512
+    # No tokenizer endpoint is exposed, so the pre-send check approximates from
+    # characters. Authoritative counts come back in the response usage block.
+    chars_per_token: 3.2
+
+# ---------------------------------------------------------------------------
+# Anthropic (Claude) - fourth LLM of the comparison, added 2026-11-02.
+# Same contract as the Z AI backend: byte-identical prompt, only the model changes.
+# Key is read from ANTHROPIC_API_KEY in the project .env, never from this file.
+# ---------------------------------------------------------------------------
+anthropic:
+  timeout_s: 600
+  # Parallel requests on the synchronous path (test_llm.py). Only used for the
+  # latency sample: the full campaign goes through the Message Batches API
+  # (run_anthropic_batch.py), which halves every token price.
+  concurrency: 8
+
+  active_model: claude-sonnet-5-5
+
+  models:
+    claude-sonnet-5-5:
+      name: Claude Sonnet 5.5
+      api_id: claude-sonnet-5-5
+      context_window: 1000000
+      max_output_tokens: 128000
+      # First-party Claude API list prices, USD per million tokens.
+      price_input_per_mtok: 2.00
+      price_cached_input_per_mtok: 0.10   # official pricing page, 2026-11-03     # cache read
+      price_cache_write_per_mtok: 2.50      # 5-minute cache write
+      price_output_per_mtok: 10.00
+      # The Message Batches API bills every token class at half price.
+      batch_discount: 0.5
+      # Sonnet 5.5 rejects non-default temperature / top_p / top_k with a 400, so no
+      # sampling parameter is sent: decoding runs at the vendor defaults. Declared here
+      # so the paper can state it, as it does for the other models.
+      sampling_configurable: false
+
+  # R2: explicit on every request.
+  sampling:
+    # Thinking is off (see below), so the answer is the two markers plus one integer:
+    # ~20 tokens. 256 is ample; a generation that hits the cap is reasoning in the
+    # text against the instructions and is recorded as skipped, not retried.
+    max_tokens: 256
+    # Effort is the only depth control on this model. With thinking off it mostly
+    # affects verbosity; kept at the API default so no arbitrary knob is introduced.
+    effort: high
+
+  thinking:
+    # between_tools = the lowest thinking setting on Sonnet 5.5 (thinking.type
+    # "disabled" is rejected). With no tools declared the model does no extended
+    # thinking at all, which is the Qwen regime of the paper and what the single_ref
+    # prompt asks for ("do not include this reasoning in your output"). Reasoning
+    # tokens would also be billed as output at $10/Mtok, five times the input rate.
+    # Set to "adaptive" to let the model think (effort then controls how much).
+    mode: between_tools
+
+  # The per-log instruction header (everything before the example traces, ~640 tokens
+  # by the 3.2 chars/token heuristic) is identical across all prompts of a log and
+  # above the 512-token minimum cacheable prefix of this model, so it gets a
+  # cache_control breakpoint. The prompt text sent is unchanged: it is the same string
+  # split into two text blocks. Cache reads cost 10% of the input price.
+  cache:
+    prefix_breakpoint: true
+    prefix_marker: "The following list shows some completed example cases"
+
+  context_guard:
+    enabled: true
+    reserve_tokens: 512
+    chars_per_token: 3.2
+
+  batch:
+    # Hard API limits are 100,000 requests / 256 MB per batch; stay well below.
+    max_requests: 20000
+    max_bytes: 200000000
+    poll_s: 60

@@ -1,0 +1,9 @@
+log_name: bpic2012
+log_description: The considered process is the loan application process of a Dutch financial institution.
+columns:
+  case_id: case
+  activity: Activity
+  resource: Resource
+  timestamp: Complete Timestamp
+case_attributes:
+  AMOUNT_REQ: the amount of credit requested by the applicant

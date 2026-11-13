@@ -1,0 +1,10 @@
+log,n,r2,ra,ra_ci,fonte
+bpic2012,2618,0.5013718975972801,0.5659670466001199,0.023663496256978205,PGTNet/experiments_fts5050/results_fts5050.csv (bpic2012_full)
+bpic2011,208,0.4478084366363745,0.5930007215479356,0.049047068838099686,PGTNet/experiments_fts5050/results_fts5050.csv (bpic2011_full)
+bpic2020_domestic_declarations,1571,0.29,0.79,0.01,tabella del paper (write_final_table.py B.CARRY)
+bpic2020_international_declarations,1290,0.38,0.87,0.02,tabella del paper (write_final_table.py B.CARRY)
+bpic2020_prepaid_travel_costs,419,0.33,0.72,0.01,tabella del paper (write_final_table.py B.CARRY)
+bpic2020_request_for_payment,1362,0.24,0.57,0.01,tabella del paper (write_final_table.py B.CARRY)
+bpic2020_travel_permit_data,1413,0.35,0.65,0.01,tabella del paper (write_final_table.py B.CARRY)
+gen_baseline,500,0.24,0.47,0.01,tabella del paper (write_final_table.py B.CARRY)
+gen_drifted,500,0.23,0.55,0.02,tabella del paper (write_final_table.py B.CARRY)

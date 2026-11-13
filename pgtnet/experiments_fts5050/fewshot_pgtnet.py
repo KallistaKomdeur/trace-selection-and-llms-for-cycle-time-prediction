@@ -16,7 +16,7 @@ overhead per run).
 import argparse, json, os, pickle, shutil, sys, time, warnings
 from datetime import datetime, timezone
 
-PGT = "/home/padela/Scrivania/PGTNet"
+PGT = "/path/to/PGTNet"
 GPS = f"{PGT}/GraphGPS"
 for p in (GPS, PGT, os.path.dirname(PGT)):
     if p not in sys.path:
@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore")
 EVENT_NUM_ATT = ["open_cases", "busyness", "ent_act", "ent_case",
                  "res_work_items", "res_unique_tasks"]
 EVENT_CAT_ATT = ["prev_resource"]
-SRC_DIR = "/home/padela/Scrivania/LLM_PPM/similar_prefix_temporal_fixed_sets_5050"
+SRC_DIR = "/path/to/LLM_PPM/fixed_sets_5050"
 
 
 # ----------------------------------------------------------------- log building
@@ -84,14 +84,20 @@ def build_entry(entry, cid_key, case_cat, case_num):
     test_log.append(tr)
     full_log.append(tr)     # after the examples: get_global_stat_func indexes log[:n_train]
     full_rows += rows
-    spec[tcid] = {"target_days": float(tc["true_total_time"]) / 1440.0,
+    # Elapsed time at the prefix is the cumulative minutes of its last event; the
+    # remaining time is what the remaining-time protocol asks PGTNet to predict.
+    elapsed_min = float(tc["ActTimeSeq"][pl - 1][1])
+    total_min = float(tc["true_total_time"])
+    spec[tcid] = {"target_days": total_min / 1440.0,
+                  "elapsed_days": elapsed_min / 1440.0,
+                  "remaining_days": max(0.0, total_min - elapsed_min) / 1440.0,
                   "prefix_lengths": [pl]}
 
     return (train_log, test_log, full_log,
             pd.DataFrame(train_rows), pd.DataFrame(full_rows), spec, tcid, pl)
 
 
-def convert(entry, cid_key, case_cat, case_num):
+def convert(entry, cid_key, case_cat, case_num, target_variable="total_time"):
     """Build the train and test graphs for one fixed set. None if unusable."""
     (train_log, test_log, full_log, train_df, full_df,
      spec, tcid, pl) = build_entry(entry, cid_key, case_cat, case_num)
@@ -124,7 +130,7 @@ def convert(entry, cid_key, case_cat, case_num):
                   case_num_att=case_num, min_num_list=min_num_list,
                   max_num_list=max_num_list, event_attributes=EVENT_CAT_ATT,
                   event_num_att=EVENT_NUM_ATT, target_normalization=True,
-                  max_time_norm=max_time_norm, target_variable="total_time",
+                  max_time_norm=max_time_norm, target_variable=target_variable,
                   node_class_dict=node_class_dict, edge_dim=edge_dim,
                   max_case_df=max_case_df, sorted_start_dates=starts,
                   sorted_end_dates=ends, max_active_cases=max_active_cases,
@@ -146,7 +152,9 @@ def convert(entry, cid_key, case_cat, case_num):
         g.pl = torch.tensor([int(g.pl)])
     return dict(train=train_graphs, test=test_graphs, node_dim=len(node_class_dict),
                 edge_dim=edge_dim, norm=max_time_norm, cid=tcid, pl=pl,
-                y_true_days=spec[tcid]["target_days"])
+                y_true_days=spec[tcid]["target_days"],
+                elapsed_days=spec[tcid]["elapsed_days"],
+                y_true_remaining_days=spec[tcid]["remaining_days"])
 
 
 # ----------------------------------------------------------------- graphgym glue
@@ -277,24 +285,37 @@ def main():
     ap.add_argument("--sample_frac", type=float, default=1.0,
                     help="score a uniform random fraction of the test sets (seed 42), for "
                          "logs where one training per test case is too slow to run in full")
-    ap.add_argument("--sets", choices=("temporal", "controlflow"), default="temporal",
-                    help="which retrieval to train on: the 50/50 sets, or the original "
-                         "control-flow-only ones in LLM_PPM/logs/")
+    ap.add_argument("--sets", choices=("temporal", "controlflow", "lambda0"), default="temporal",
+                    help="which retrieval to train on: the 50/50 sets (lambda 0.5), the original "
+                         "control-flow-only ones (lambda 1) or the temporal-only ones (lambda 0), "
+                         "all in LLM_PPM/logs/ except the 50/50 source folder")
+    ap.add_argument("--seed", type=int, default=42,
+                    help="training seed; 42 writes to <sub>/<log>, any other seed to <sub>_seed<N>/<log>")
+    ap.add_argument("--target", choices=("total_time", "remaining_time"), default="total_time",
+                    help="total_time: predict the whole cycle time (paper). remaining_time: the "
+                         "original PGTNet target, scored as prediction + elapsed time at the prefix")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
+    tsuf = "" if a.target == "total_time" else "_remaining"
 
     meta = {l["short"]: l for l in json.load(open(f"{PGT}/experiments_fts5050/logs.json"))}[a.log]
     if a.sets == "temporal":
         src = f"{SRC_DIR}/{meta['src']}_similar_prefix_temporal_fixed_sets.json"
-        sub = "fewshot"
+        sub = "fewshot" + tsuf
+    elif a.sets == "lambda0":
+        src = (f"/path/to/LLM_PPM/logs/{meta['src']}/"
+               f"{meta['src']}_lambda0_fixed_sets.json")
+        sub = "fewshot_l0" + tsuf
     else:
         # Both retrievals sample the same test cases at the same prefix lengths, so the
         # two campaigns differ only in the ten traces each run is trained on.
-        src = (f"/home/padela/Scrivania/LLM_PPM/logs/{meta['src']}/"
+        src = (f"/path/to/LLM_PPM/logs/{meta['src']}/"
                f"{meta['src']}_similar_prefix_fixed_sets.json")
-        sub = "fewshot_cf"
+        sub = "fewshot_cf" + tsuf
     if not os.path.exists(src):
-        raise SystemExit(f"fixed sets non trovati: {src}")
+        raise SystemExit(f"fixed sets not found: {src}")
+    if a.seed != 42:
+        sub = f"{sub}_seed{a.seed}"
     out_dir = a.out or f"{PGT}/experiments_fts5050/{sub}/{a.log}"
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "predictions.jsonl")
@@ -312,11 +333,11 @@ def main():
     if done:
         print(f"[{a.log}] resuming: {len(done)} sets already predicted", flush=True)
 
-    scratch = f"/tmp/claude-1000/fewshot_{a.log}"
+    scratch = f"/tmp/claude-1000/fewshot{tsuf}_{a.sets}_s{a.seed}_{a.log}"
     shutil.rmtree(scratch, ignore_errors=True)
     runner = Runner(f"{PGT}/training_configs/{meta['cfg']}.yaml",
                     f"PyG-EVENT{meta['dataset']}", scratch,
-                    a.max_epoch, a.patience, a.min_rel_delta)
+                    a.max_epoch, a.patience, a.min_rel_delta, seed=a.seed)
 
     sys.path.insert(0, f"{PGT}/experiments_fts5050")
     from build_fts5050 import iter_entries, CID_KEYS
@@ -327,7 +348,7 @@ def main():
         rng = np.random.default_rng(42)
         keep = set(rng.choice(n_all, size=max(1, round(n_all * a.sample_frac)),
                               replace=False).tolist())
-        print(f"[{a.log}] campiono {len(keep)}/{n_all} set ({a.sample_frac:.0%}, seed 42)",
+        print(f"[{a.log}] sampling {len(keep)}/{n_all} sets ({a.sample_frac:.0%}, seed 42)",
               flush=True)
 
     t0 = time.time()
@@ -341,7 +362,8 @@ def main():
             cid_key = next(k for k in CID_KEYS if k in entry["test_case"])
             rec = {"set_index": i}
             try:
-                conv = convert(entry, cid_key, meta["case_attributes"], meta["case_num_att"])
+                conv = convert(entry, cid_key, meta["case_attributes"], meta["case_num_att"],
+                               target_variable=a.target)
                 if conv is None:
                     rec.update(status="unusable")
                     n_skip += 1
@@ -350,14 +372,21 @@ def main():
                     c, l, y_norm, p_norm = r["preds"][0]
                     ex_days = sorted(float(x["total_time"]) / 1440.0
                                      for x in entry["examples"])
+                    pred_days = p_norm * conv["norm"]
                     rec.update(status="ok", cid=c, pl=l, norm_days=conv["norm"],
+                               target=a.target, sets=a.sets, seed=a.seed,
                                ex_mean_days=float(np.mean(ex_days)),
                                ex_median_days=float(np.median(ex_days)),
-                               y_true_days=conv["y_true_days"],
+                               y_true_days=conv["y_true_days"],      # total cycle time, always
                                y_true_norm=y_norm, y_pred_norm=p_norm,
-                               y_pred_days=p_norm * conv["norm"],
+                               y_pred_days=pred_days,                 # what the model predicted
                                n_train_graphs=len(conv["train"]),
                                epochs=r["epochs"], train_loss=r["train_loss"])
+                    if a.target == "remaining_time":
+                        # scored quantity: predicted remaining + known elapsed = total
+                        rec.update(elapsed_days=conv["elapsed_days"],
+                                   y_true_remaining_days=conv["y_true_remaining_days"],
+                                   y_pred_total_days=pred_days + conv["elapsed_days"])
                     n_ok += 1
             except Exception as e:
                 rec.update(status="error", error=f"{type(e).__name__}: {e}")

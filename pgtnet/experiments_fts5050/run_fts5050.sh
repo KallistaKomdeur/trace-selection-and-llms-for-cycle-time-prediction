@@ -9,17 +9,21 @@
 # Existing dataset classes / training configs / inference configs are reused, so
 # every artefact this touches is backed up and restored by the EXIT trap.
 #
-# Usage: bash run_fts5050.sh <short>
+# Usage: bash run_fts5050.sh <short> [seed]
+#   seed (default 42) is the training seed (repetitions of the full-log remaining-time
+#   row); with a seed other than 42 the results go to experiments_fts5050/<short>_seed<N>.
 set -uo pipefail
 SHORT="$1"
-PGT=/home/padela/Scrivania/PGTNet
+SEED="${2:-42}"
+export SEED
+PGT=/path/to/PGTNet
 GPS=$PGT/GraphGPS
-PY=/home/padela/anaconda3/envs/graphgps/bin/python
+PY=python
 TS=$(date +%s)
 
 read -r DATASET XES CFG < <($PY - "$SHORT" <<'EOF'
 import json, sys
-for l in json.load(open('/home/padela/Scrivania/PGTNet/experiments_fts5050/logs.json')):
+for l in json.load(open('/path/to/PGTNet/experiments_fts5050/logs.json')):
     if l['short'] == sys.argv[1]:
         print(l['dataset'], l['xes'], l['cfg']); break
 else:
@@ -31,8 +35,9 @@ EOF
 JSONL=${SHORT}_fts5050_preprocessed.jsonl
 EXP_FULL=$PGT/experiments/$SHORT
 EXP_OUT=$PGT/experiments_fts5050/$SHORT
+[ "$SEED" != 42 ] && EXP_OUT=${EXP_OUT}_seed$SEED
 GPS_DS=$GPS/datasets/EVENT${DATASET}
-ROGUE=/home/padela/Scrivania/datasets/EVENT${DATASET}
+ROGUE=/path/to/datasets/EVENT${DATASET}
 XES_PATH=$PGT/raw_dataset/$XES
 
 restore () {

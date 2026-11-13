@@ -1,0 +1,9 @@
+log_name: bpic2011
+log_description: The considered process deals with a Dutch hospital process.
+columns:
+  case_id: Case ID
+  activity: Activity
+  resource: org:group
+  timestamp: Complete Timestamp
+case_attributes:
+  Age: the age of the patient

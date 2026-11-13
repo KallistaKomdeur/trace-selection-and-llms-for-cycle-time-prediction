@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -uo pipefail
-PGT=/home/padela/Scrivania/PGTNet
-SRC=/home/padela/Scrivania/LLM_PPM/similar_prefix_temporal_fixed_sets_5050
-PY=/home/padela/anaconda3/envs/graphgps/bin/python
+PGT=/path/to/PGTNet
+SRC=/path/to/LLM_PPM/fixed_sets_5050
+PY=python
 [ -x "$PY" ] || PY=python3
 mkdir -p "$PGT/new_logs" "$PGT/fts5050_splits"
 $PY - <<'EOF' > /tmp/fts5050_order.txt
 import json,os
-logs=json.load(open('/home/padela/Scrivania/PGTNet/experiments_fts5050/logs.json'))
-SRC='/home/padela/Scrivania/LLM_PPM/similar_prefix_temporal_fixed_sets_5050'
+logs=json.load(open('/path/to/PGTNet/experiments_fts5050/logs.json'))
+SRC='/path/to/LLM_PPM/fixed_sets_5050'
 rows=[(os.path.getsize(f"{SRC}/{l['src']}_similar_prefix_temporal_fixed_sets.json"), l['short'], l['src']) for l in logs]
 for sz,s,src in sorted(rows):
     print(s, src)
