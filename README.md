@@ -1,4 +1,4 @@
-# Combining Trace Selection and Large Language Models for Process Cycle Time Prediction
+# Combining Trace Selection and Large Language Models for Process Remaining Time Prediction
 
 Few-shot LLM prediction of total case duration. Given a partial case, the pipeline builds a prompt with some similar, complete example cases and asks an LLM to predict how long the case will take in total. Three strategies for picking those examples are compared: random, only control-flow similarity, and control-flow + temporal similarity.
 
@@ -104,7 +104,7 @@ The following settings are available in `config/settings.yaml`:
   - random: uniform random training examples
   - similar_prefix: training examples with the closest prefix to the test
     prefix, by control-flow (normalized Damerau-Levenshtein) distance alone
-  - similar_prefix_temporal: training examples chosen by 0.5 * normalized control-flow distance + 0.5 normalized prefix-cycle-time distance
+  - similar_prefix_temporal: training examples chosen by 0.5 * normalized control-flow distance + 0.5 normalized prefix-remaining-time distance
 
 ## Outputs:
 - `results/<event_log_name>/run_X.jsonl`: one line per query with settings used and results.
